@@ -2,6 +2,7 @@ import requests
 import json
 import time
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from pprint import pprint
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -58,7 +59,11 @@ class RubrikObject(object):
         """This method returns a list of all VMs on the rubrik cluster"""
         vm_list = requests.get('https://' + self.server + '/api/v1/vmware/vm', verify = False, headers = self.headers)
         vm_list_json = vm_list.json()
-        return vm_list_json
+        #pprint(vm_list_json)
+        for vm in vm_list_json['data']:
+            pprint(vm)
+            print("--------------------------------")
+        #return vm_list_json
 
     def get_CurrentClusters(self):
         """This method gets the cluster id of the current rubrik cluster"""
@@ -159,29 +164,35 @@ class RubrikObject(object):
 
         vcenter_servers = {}
         print("Req_Json data:")
-        print(req_json['data'][1])
+        #print(req_json['data'][1])
         # vcenter['hostname'] is the vcenter_address; vcenter['id'] is the vcenter_id; vcenter['username'] is the vcenter_admin; vcenter['caCerts'] is the ca_cert for the vcenter; vcenter['primaryClusterId'] is the cluster_id
-        self.vcenter_id = req_json['data'][0]['id']
-        self.vcenter_username = req_json['data'][0]['username']
-        self.vcenter_cert = req_json['data'][0]['caCerts']
-        self.vcenter_primary_cluster = req_json['data'][0]['primaryClusterId']  # This should be equal to the rubriks cluster_id
+        self.vcenter_id = req_json['data'][1]['id']
+        self.vcenter_username = req_json['data'][1]['username']
+        self.vcenter_cert = req_json['data'][1]['caCerts']
+        self.vcenter_primary_cluster = req_json['data'][1]['primaryClusterId']  # This should be equal to the rubriks cluster_id
         for vcenter in req_json['data']:
-            vcenter_servers[vcenter['hostname']] = {'vcenter_id': vcenter['id'], 'vcenter_username': vcenter['username'], 'vcenter_cert': vcenter['caCerts']}
+            vcenter_servers[vcenter['hostname']] = vcenter
+            # try:
+            #     vcenter_servers[vcenter['hostname']] = {'vcenter_id': vcenter['id'], 'vcenter_username': vcenter['username'], 'vcenter_cert': vcenter['caCerts']}
+            # except:
+            #     vcenter_servers[vcenter['hostname']] = {'vcenter_id': vcenter['id'], 'vcenter_username': vcenter['username']}
         print('vcenter_server_json: ')
-        print(vcenter_servers)
-        return req_json
+        pprint(vcenter_servers)
+        #print(vcenter_servers.keys())
+        #return req_json
+        return vcenter_servers
 
     def refresh_medadata(self):
         req = requests.post(self.api_url + '/vmware/vcenter/' + self.vcenter_id + '/refresh', verify = False, headers = self.headers)
         req_json = req.json()
-
+        pprint(req_json)
         return req_json
 
     def get_esxi_hypervisors(self):
         self.get_CurrentClusters()
         req = requests.get(self.api_url + '/vmware/host?primary_cluster_id=' + self.cluster_id, verify = False, headers = self.headers)
         req_json = req.json()
-
+        pprint(req_json)
         return req_json
 
     def search_for_vm(self, search_for, sla_domain_id='UNPROTECTED', num_limit=1):
